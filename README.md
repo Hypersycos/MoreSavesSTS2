@@ -63,9 +63,9 @@ Press **Ctrl+Shift+B** or click **Build → Build Solution**
 
 The mod will **automatically** install to:
 
-Slay the Spire 2/mods/ExampleMod/
-├── ExampleMod.dll
-└── ExampleMod.pck
+Slay the Spire 2/mods/ExampleMod/  
+├── ExampleMod.dll  
+└── ExampleMod.pck  
 
 
 can be changed in ExampleMod.csproj 
