@@ -9,9 +9,9 @@
 		<Nullable>enable</Nullable>
 		
 		<!-- ↓ MOD METADATA - Change these! -->
-		<ModName>ExampleMod</ModName>
-		<ModDisplayName>Example Mod</ModDisplayName>
-		<ModAuthor>lamali</ModAuthor>
+		<ModName>MoreSaves</ModName>
+		<ModDisplayName>More Saves</ModDisplayName>
+		<ModAuthor>Hypersycos</ModAuthor>
 		<ModVersion>1.0.0</ModVersion>
 		
 		<AssemblyName>$(ModName)</AssemblyName>
@@ -37,6 +37,10 @@
 		<Reference Include="sts2">
 			<HintPath>$(GameDataDir)\sts2.dll</HintPath>
 		</Reference>
+	</ItemGroup>
+	
+	<ItemGroup>
+	  <Folder Include="SaveLoad\" />
 	</ItemGroup>
 	
 	<!-- Generate project.godot before build -->
