@@ -11,39 +11,71 @@ using MegaCrit.Sts2.Core.Saves.Managers;
 using MegaCrit.Sts2.Core.Saves.Runs;
 using System.Text.Json;
 using MegaCrit.Sts2.Core.Logging;
+using MegaCrit.Sts2.Core.Nodes.Screens.MainMenu;
 
 namespace MoreSaves.Patches;
 
-[HarmonyPatch]
-public class SavePatch
+public class Store
 {
-    static SerializableRun? lastSave = null;
-    static ISaveStore? saveStore = null;
-    static IProfileIdProvider? profileIdProvider = null;
+    public static string currentSave = "Mar 15 16-19 IRONCLAD";
+    public static NMainMenu? mainMenu = null;
+}
 
+[HarmonyPatch]
+public class MenuPatch
+{
     [HarmonyPostfix]
-    [HarmonyPatch(typeof(RunSaveManager), nameof(RunSaveManager.SaveRun))]
-    static void SavePostfix(ref AbstractRoom? preFinishedRoom, ref bool ____forceSynchronous, ref ISaveStore ____saveStore, ref IProfileIdProvider ____profileIdProvider)
+    [HarmonyPatch(typeof(NMainMenu), nameof(NMainMenu.Create))]
+    static void GrabMenu(ref NMainMenu __result)
     {
-        Log.Info("Postfix starting");
+        Store.mainMenu = __result;
+        Log.Info("Grabbed mainmenu!");
+    }
+}
 
-        if (!RunManager.Instance.ShouldSave || (RunManager.Instance.NetService.Type != NetGameType.Singleplayer && RunManager.Instance.NetService.Type != NetGameType.Host))
-        {
-            return;
-        }
-
-        Log.Info("Postfix passed guard");
-
-        lastSave = RunManager.Instance.ToSave(preFinishedRoom);
-        saveStore = ____saveStore;
-        profileIdProvider = ____profileIdProvider;
-
-        Log.Info("lastSave: " + lastSave?.ToString());
-        Log.Info("saveStore: " + saveStore?.ToString());
-        Log.Info("profileIdProvider: " + profileIdProvider?.ToString());
+[HarmonyPatch(typeof(RunSaveManager))]
+public class RunSaveManagerPatch
+{
+    [HarmonyPrefix]
+    [HarmonyPatch("CurrentRunSavePath", MethodType.Getter)]
+    static bool SingleplayerPath(ref string __result, IProfileIdProvider ____profileIdProvider)
+    {
+        __result = Path.Combine(RunSaveManager.GetRunSavePath(____profileIdProvider.CurrentProfileId, "MoreSaves"), Store.currentSave+".spsave");
+        Log.Info(__result);
+        return false;
     }
 
     [HarmonyPrefix]
+    [HarmonyPatch("CurrentMultiplayerRunSavePath", MethodType.Getter)]
+    static bool MultiplayerPath(ref string __result, IProfileIdProvider ____profileIdProvider)
+    {
+        __result = Path.Combine(RunSaveManager.GetRunSavePath(____profileIdProvider.CurrentProfileId, "MoreSaves"), Store.currentSave+".mpsave");
+        Log.Info(__result);
+        return false;
+    }
+
+    [HarmonyPrefix]
+    [HarmonyPatch(nameof(SaveManager.HasRunSave), MethodType.Getter)]
+    static bool HasSingleplayerRun(ref bool __result, ISaveStore ____saveStore, IProfileIdProvider ____profileIdProvider)
+    {
+        string dir = Path.Combine(RunSaveManager.GetRunSavePath(____profileIdProvider.CurrentProfileId, "MoreSaves"));
+        __result = ____saveStore.GetFilesInDirectory(dir).Where((name) => name.Length > 6 && name.Substring(name.Length - 6) == "spsave").Count() > 0;
+        Log.Info("Has Singleplayer run: " + __result.ToString());
+        return false;
+    }
+
+    [HarmonyPrefix]
+    [HarmonyPatch(nameof(SaveManager.HasMultiplayerRunSave), MethodType.Getter)]
+    static bool HasMultiplayerRun(ref bool __result, ISaveStore ____saveStore, IProfileIdProvider ____profileIdProvider)
+    {
+        string dir = Path.Combine(RunSaveManager.GetRunSavePath(____profileIdProvider.CurrentProfileId, "MoreSaves"));
+        __result = ____saveStore.GetFilesInDirectory(dir).Where((name) => name.Length > 6 && name.Substring(name.Length - 6) == "mpsave").Count() > 0;
+        Log.Info("Has Multiplayer run: " + __result.ToString());
+        return false;
+    }
+}
+
+/*    [HarmonyPrefix]
     [HarmonyPatch(typeof(NPauseMenu), "CloseToMenu")]
     static void QuitPrefix()
     {
@@ -89,5 +121,4 @@ public class SavePatch
         lastSave = null;
         saveStore = null;
         profileIdProvider = null;
-    }
-}
+    }*/
