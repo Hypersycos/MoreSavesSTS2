@@ -13,7 +13,10 @@
 		<ModDisplayName>More Saves</ModDisplayName>
 		<ModAuthor>Hypersycos</ModAuthor>
 		<ModVersion>1.0.0</ModVersion>
-		
+		<ModDescription></ModDescription>
+		<ModDependencies></ModDependencies>
+		<ModAffectsGameplay>false</ModAffectsGameplay>
+
 		<AssemblyName>$(ModName)</AssemblyName>
 		<Version>$(ModVersion)</Version>
 		
@@ -62,25 +65,32 @@ project/assembly_name="$(ModName)"
 		<Message Text="Generated project.godot" Importance="high" />
 	</Target>
 	
-	<!-- Generate mod_manifest.json before build -->
-	<Target Name="GenerateModManifest" BeforeTargets="BeforeBuild">
-		<PropertyGroup>
-			<ModManifestPath>$(PackProject)\mod_manifest.json</ModManifestPath>
-			<ModManifestContent>{
-  "pck_name": "$(ModName)",
-  "name": "$(ModDisplayName)",
-  "author": "$(ModAuthor)",
-  "version": "$(ModVersion)"
-}</ModManifestContent>
-		</PropertyGroup>
-		
-		<WriteLinesToFile File="$(ModManifestPath)" Lines="$(ModManifestContent)" Overwrite="true" Encoding="UTF-8" />
-		<Message Text="Generated mod_manifest.json" Importance="high" />
-	</Target>
-	
 	<Target Name="PostBuild" AfterTargets="Build">
 		<MakeDir Directories="$(ModsOutputDir)" />
 		<Copy SourceFiles="$(TargetPath)" DestinationFolder="$(ModsOutputDir)" />
 		<Exec Command="&quot;$(GodotExePath)&quot; --headless --path &quot;$(PackProject)&quot; --export-pack &quot;Windows Desktop&quot; &quot;$(ModsOutputDir)\$(ModName).pck&quot;" />
+	</Target>
+
+	<!-- Generate mod_manifest.json before build -->
+	<Target Name="GenerateModManifest" AfterTargets="PostBuild">
+		<PropertyGroup>
+			<ModManifestPath>$(ModsOutputDir)\mod_manifest.json</ModManifestPath>
+			<ModManifestContent>
+				{
+				"id": "$(ModName)",
+				"name": "$(ModName)",
+				"author": "$(ModAuthor)",
+				"description": "$(ModDescription)",
+				"version": "$(ModVersion)",
+				"has_pck": true,
+				"has_dll": true,
+				"dependencies": [$(ModDependencies)],
+				"affects_gameplay": $(ModAffectsGameplay)
+				}
+			</ModManifestContent>
+		</PropertyGroup>
+
+		<WriteLinesToFile File="$(ModManifestPath)" Lines="$(ModManifestContent)" Overwrite="true" Encoding="UTF-8" />
+		<Message Text="Generated mod_manifest.json" Importance="high" />
 	</Target>
 </Project>
