@@ -42,7 +42,7 @@
 	</ItemGroup>
 	
 	<ItemGroup>
-	  <Folder Include="SaveLoad\" />
+	  <Folder Include="pack\images\" />
 	</ItemGroup>
 	
 	<!-- Generate project.godot before build -->
