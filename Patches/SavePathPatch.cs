@@ -232,23 +232,41 @@ public class ContinueButtonPatch
     }
 }
 
-[HarmonyPatch(typeof(NCharacterSelectScreen))]
-public class CharacterSelectPatch
+[HarmonyPatch(typeof(RunManager))]
+public class RunManagerPatch
 {
+
     [HarmonyPrefix]
-    [HarmonyPatch(nameof(NCharacterSelectScreen.BeginRun))]
-    public static void ChangeSaveName(StartRunLobby ____lobby)
+    [HarmonyPatch(nameof(RunManager.ToSave))]
+    public static void ChangeSaveName(RunManager __instance, long ____startTime)
     {
-        if (____lobby.NetService.Type == NetGameType.Singleplayer)
+        DateTime startTime = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
+        startTime = startTime.AddSeconds(____startTime).ToLocalTime();
+
+        Log.Info(__instance.ToString()!);
+        Log.Info(typeof(RunManager).GetProperty("State", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.ToString()!);
+        RunState? state = typeof(RunManager).GetProperty("State", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(__instance) as RunState;
+
+        Log.Info(state!.ToString()!);
+
+        Log.Info(__instance.NetService.ToString()!);
+
+        Log.Info(__instance.NetService.Type.ToString()!);
+
+        if (__instance.NetService.Type == NetGameType.Singleplayer)
         {
-            Store.currentSPSave = DateTime.Now.ToString("MMM dd HH-mm") + " " + ____lobby.Players[0].character.Title.GetFormattedText();
+            Store.currentSPSave = startTime.ToString("MMM dd HH-mm") + " " + state!.Players[0].Character.Title.GetFormattedText();
         }
         else
         {
-            Store.currentMPSave = DateTime.Now.ToString("MMM dd HH-mm");
-            foreach (LobbyPlayer player in ____lobby.Players)
+            Store.currentMPSave = startTime.ToString("MMM dd HH-mm");
+            foreach (Player player in state!.Players)
             {
-                Store.currentMPSave += " " + PlatformUtil.GetPlayerName(RunManager.Instance.NetService.Platform, player.id) + " " + player.character.Title.GetFormattedText();
+                Log.Info(player.ToString()!);
+                Log.Info(player.NetId.ToString()!);
+                Log.Info(player.Character.ToString()!);
+                Log.Info(player.Character.Title.ToString()!);
+                Store.currentMPSave += " " + PlatformUtil.GetPlayerName(__instance.NetService.Platform, player.NetId) + " " + player.Character.Title.GetFormattedText();
             }
         }
     }
@@ -280,6 +298,9 @@ public class RunSaveManagerPatch
     static bool HasSingleplayerRun(ref bool __result, ISaveStore ____saveStore, IProfileIdProvider ____profileIdProvider)
     {
         Store.lastSaveStore = ____saveStore;
+        if (!____saveStore.DirectoryExists(Store.SaveDir))
+            ____saveStore.CreateDirectory(Store.SaveDir);
+
         IEnumerable<string> files = ____saveStore.GetFilesInDirectory(Store.SaveDir).Where((name) => name.Length > 6 && name.Substring(name.Length - 6) == "spsave");
         Store.spSaves = files;
         Store.saveCount = files.Count();
