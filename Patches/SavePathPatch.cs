@@ -176,22 +176,39 @@ public class MultiplayerMenuPatch
         }
     }
 
-    [HarmonyPrefix]
-    [HarmonyPatch("StartLoad")]
-    static bool ModifyContinue(NMultiplayerSubmenu __instance, NSubmenuStack ____stack)
+    [HarmonyPostfix]
+    [HarmonyPatch(nameof(NMultiplayerSubmenu._Ready))]
+    static void RewireButtons(NMultiplayerSubmenu __instance, NMainMenuTextButton ____loadButton, NMainMenuTextButton ____abandonButton)
     {
         Store.submenu = __instance;
-        ____stack.PushSubmenuType<NewMPContinueScreen>();
-        return false;
-    }
 
-    [HarmonyPrefix]
-    [HarmonyPatch("AbandonRun")]
-    static bool ModifyAbandon(NMultiplayerSubmenu __instance, NSubmenuStack ____stack)
-    {
-        Store.submenu = __instance;
-        ____stack.PushSubmenuType<NewMPAbandonScreen>();
-        return false;
+        foreach (var conn in ____loadButton.GetSignalConnectionList(NClickableControl.SignalName.Released))
+        {
+            Callable callable = (Callable)conn["callable"];
+            StringName signal = conn["signal"].AsSignal().Name;
+
+            if (____loadButton.IsConnected(signal, callable))
+            {
+                ____loadButton.Disconnect(signal, callable);
+            }
+        }
+
+        foreach (var conn in ____abandonButton.GetSignalConnectionList(NClickableControl.SignalName.Released))
+        {
+            Callable callable = (Callable)conn["callable"];
+            StringName signal = conn["signal"].AsSignal().Name;
+
+            if (____abandonButton.IsConnected(signal, callable))
+            {
+                ____abandonButton.Disconnect(signal, callable);
+            }
+        }
+
+        Callable continueMenu = Callable.From((NButton b) => Store.mainMenu!.SubmenuStack.PushSubmenuType<NewMPContinueScreen>());
+        ____loadButton.Connect(NClickableControl.SignalName.Released, continueMenu);
+
+        Callable abandonMenu = Callable.From((NButton b) => Store.mainMenu!.SubmenuStack.PushSubmenuType<NewMPAbandonScreen>());
+        ____abandonButton.Connect(NClickableControl.SignalName.Released, abandonMenu);
     }
 
 }
@@ -225,32 +242,48 @@ public class MenuPatch
         }
     }
 
-    [HarmonyPrefix]
-    [HarmonyPatch("OnContinueButtonPressed")]
-    static bool ModifyContinue(NMainMenu __instance, NMainMenuTextButton ____continueButton, ref NMainMenuTextButton? ____lastHitButton)
+    [HarmonyPostfix]
+    [HarmonyPatch(nameof(NMainMenu._Ready))]
+    static void RewireButtons(NMainMenu __instance, NMainMenuTextButton ____continueButton, NMainMenuTextButton ____abandonRunButton, ref NMainMenuTextButton? ____lastHitButton)
     {
-        ____lastHitButton = ____continueButton;
-        __instance.SubmenuStack.PushSubmenuType<NewContinueScreen>();
-        return false;
-    }
+        foreach (var conn in ____continueButton.GetSignalConnectionList(NClickableControl.SignalName.Released))
+        {
+            Callable callable = (Callable)conn["callable"];
+            StringName signal = conn["signal"].AsSignal().Name;
 
-    [HarmonyPrefix]
-    [HarmonyPatch("OnAbandonRunButtonPressed")]
-    static bool ModifyAbandon(NMainMenu __instance, NMainMenuTextButton ____abandonRunButton, ref NMainMenuTextButton? ____lastHitButton)
-    {
-        ____lastHitButton = ____abandonRunButton;
-        __instance.SubmenuStack.PushSubmenuType<NewAbandonScreen>();
-        return false;
+            if (____continueButton.IsConnected(signal, callable))
+            {
+                ____continueButton.Disconnect(signal, callable);
+            }
+        }
+
+        foreach (var conn in ____abandonRunButton.GetSignalConnectionList(NClickableControl.SignalName.Released))
+        {
+            Callable callable = (Callable)conn["callable"];
+            StringName signal = conn["signal"].AsSignal().Name;
+
+            if (____abandonRunButton.IsConnected(signal, callable))
+            {
+                ____abandonRunButton.Disconnect(signal, callable);
+            }
+        }
+
+        Callable continueMenu = Callable.From((NButton b) => __instance.SubmenuStack.PushSubmenuType<NewContinueScreen>());
+        ____continueButton.Connect(NClickableControl.SignalName.Released, continueMenu);
+
+        Callable abandonMenu = Callable.From((NButton b) => __instance.SubmenuStack.PushSubmenuType<NewAbandonScreen>());
+        ____abandonRunButton.Connect(NClickableControl.SignalName.Released, abandonMenu);
     }
 }
 
-[HarmonyPatch(typeof(NMainMenuContinueButton))]
+[HarmonyPatch(typeof(NContinueRunInfo))]
 public class ContinueButtonPatch
 {
     [HarmonyPrefix]
-    [HarmonyPatch("OnFocus")]
-    static bool DisableContinuePopup()
+    [HarmonyPatch(nameof(NContinueRunInfo.HasResult), MethodType.Getter)]
+    static bool DisableContinuePopup(ref bool __result)
     {
+        __result = false;
         return false;
     }
 }
@@ -263,35 +296,38 @@ public class RunManagerPatch
         return String.Join("", unfiltered.Split('/', '<', '>', ':', '"', '\\', '|', '?', '*'));
     }
 
-    public static string GetFilteredName(ulong netid, PlatformType platform)
+    public static string GetFilteredCharacter(LocString characterTitle)
     {
-        return FilterInvalid(PlatformUtil.GetPlayerName(platform, netid));
+        return FilterInvalid(characterTitle.GetFormattedText());
     }
 
-    public static string GetFilteredCharacter(Player player)
+    public static string GetSingleplayerName(long startTime, int ascension, LocString characterTitle)
     {
-        return FilterInvalid(player.Character.Title.GetFormattedText());
+        DateTime startDate = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
+        startDate = startDate.AddSeconds(startTime).ToLocalTime();
+        return $"{startDate.ToString("MMM dd HH-mm")} A{ascension} {GetFilteredCharacter(characterTitle)}";
+    }
+
+    public static string GetMultiplayerName(long startTime, int ascension, IEnumerable<LocString> characterTitles)
+    {
+        DateTime startDate = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
+        startDate = startDate.AddSeconds(startTime).ToLocalTime();
+        return $"{startDate.ToString("MMM dd HH-mm")} A{ascension} {String.Join(", ", characterTitles.Select(GetFilteredCharacter))}";
     }
 
     [HarmonyPrefix]
-    [HarmonyPatch(nameof(RunManager.ToSave))]
+    [HarmonyPatch("InitializeNewRun")]
     public static void ChangeSaveName(RunManager __instance, long ____startTime)
     {
-        DateTime startTime = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
-        startTime = startTime.AddSeconds(____startTime).ToLocalTime();
         RunState? state = typeof(RunManager).GetProperty("State", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(__instance) as RunState;
 
         if (__instance.NetService.Type == NetGameType.Singleplayer)
         {
-            Store.currentSPSave = startTime.ToString("MMM dd HH-mm") + " " + GetFilteredCharacter(state!.Players[0]);
+            Store.currentSPSave = GetSingleplayerName(____startTime, state!.AscensionLevel, state.Players[0].Character.Title);
         }
         else
         {
-            Store.currentMPSave = startTime.ToString("MMM dd HH-mm");
-            foreach (Player player in state!.Players)
-            {
-                Store.currentMPSave += " " + GetFilteredName(player.NetId, __instance.NetService.Platform) + " " + GetFilteredCharacter(player);
-            }
+            Store.currentMPSave = GetMultiplayerName(____startTime, state!.AscensionLevel, state.Players.Select((x) => x.Character.Title));
         }
     }
 }
@@ -407,12 +443,9 @@ public class RunSaveManagerPatch
 
             if (vanilla.Success)
             {
-                DateTime startTime = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
-                startTime = startTime.AddSeconds(vanilla.SaveData!.StartTime).ToLocalTime();
+                LocString characterTitle = new LocString("characters", vanilla.SaveData!.Players[0].CharacterId!.Entry + ".title");
 
-                string character = new LocString("characters", vanilla.SaveData!.Players[0].CharacterId!.Entry + ".title").GetFormattedText();
-
-                string newName = startTime.ToString("MMM dd HH-mm") + " " + RunManagerPatch.FilterInvalid(character);
+                string newName = RunManagerPatch.GetSingleplayerName(vanilla.SaveData!.StartTime, vanilla.SaveData.Ascension, characterTitle);
                 string copyPath = Path.Combine(Store.SaveDir, newName + ".spsave");
 
                 Store.Logger.Info("Moving from " + oldPath + " to " + copyPath);
@@ -468,16 +501,9 @@ public class RunSaveManagerPatch
 
             if (vanilla.Success)
             {
-                DateTime startTime = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
-                startTime = startTime.AddSeconds(vanilla.SaveData!.StartTime).ToLocalTime();
+                var getTitles = (SerializablePlayer x) => new LocString("characters", x.CharacterId!.Entry + ".title");
 
-                string newName = startTime.ToString("MMM dd HH-mm");
-
-                foreach (SerializablePlayer player in vanilla.SaveData!.Players)
-                {
-                    string character = new LocString("characters", player.CharacterId!.Entry + ".title").GetFormattedText();
-                    newName += " " + RunManagerPatch.FilterInvalid(PlatformUtil.GetPlayerName(PlatformUtil.PrimaryPlatform, player.NetId)) + " " + RunManagerPatch.FilterInvalid(character);
-                }
+                string newName = RunManagerPatch.GetMultiplayerName(vanilla.SaveData!.StartTime, vanilla.SaveData.Ascension, vanilla.SaveData!.Players.Select(getTitles));
 
                 string copyPath = Path.Combine(Store.SaveDir, newName + ".mpsave");
 
