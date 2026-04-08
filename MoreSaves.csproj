@@ -75,17 +75,17 @@ project/assembly_name="$(ModName)"
 		<PropertyGroup>
 			<ModManifestPath>$(ModsOutputDir)\mod_manifest.json</ModManifestPath>
 			<ModManifestContent>
-				{
-				"id": "$(ModName)",
-				"name": "$(ModName)",
-				"author": "$(ModAuthor)",
-				"description": "$(ModDescription)",
-				"version": "$(ModVersion)",
-				"has_pck": true,
-				"has_dll": true,
-				"dependencies": [$(ModDependencies)],
-				"affects_gameplay": $(ModAffectsGameplay)
-				}
+{
+	"id": "$(ModName)",
+	"name": "$(ModName)",
+	"author": "$(ModAuthor)",
+	"description": "$(ModDescription)",
+	"version": "$(ModVersion)",
+	"has_pck": true,
+	"has_dll": true,
+	"dependencies": [$(ModDependencies)],
+	"affects_gameplay": $(ModAffectsGameplay)
+}
 			</ModManifestContent>
 		</PropertyGroup>
 
