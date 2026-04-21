@@ -87,7 +87,7 @@ namespace MoreSaves.MainMenu
         public void ContinueSP(NButton _)
         {
             Store.currentSPSave = myName;
-            Store.Logger.Info($"Continuing SP save {myName}");
+            Store.Logger.Info($"Continuing SP save \"{myName}\"");
             Store.mainMenu!.RefreshButtons();
             
             ContinueSP(Store.mainMenu, _);
@@ -101,7 +101,7 @@ namespace MoreSaves.MainMenu
 
         public void ContinueMP(NButton _)
         {
-            Store.Logger.Info($"Continuing MP save {myName}");
+            Store.Logger.Info($"Continuing MP save \"{myName}\"");
             if (readResult == null || !readResult.Success)
             {
                 Store.Logger.Warn("Broken multiplayer run save detected");
@@ -123,7 +123,7 @@ namespace MoreSaves.MainMenu
 
         public void AbandonSP(NButton _)
         {
-            Store.Logger.Info($"Abandoning SP save {myName}");
+            Store.Logger.Info($"Abandoning SP save \"{myName}\"");
             Store.currentSPSave = myName;
             Store.mainMenu!.RefreshButtons();
             NModalContainer.Instance?.Add(NAbandonRunConfirmPopup.Create(Store.mainMenu)!);
@@ -131,7 +131,7 @@ namespace MoreSaves.MainMenu
 
         public void AbandonMP(NButton _)
         {
-            Store.Logger.Info($"Abandoning MP save {myName}");
+            Store.Logger.Info($"Abandoning MP save \"{myName}\"");
             Store.currentMPSave = myName;
 
             AbandonRun(Store.submenu!, _);
